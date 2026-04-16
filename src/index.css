@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: rgba(15, 15, 20, 0.92);
+  --bg-secondary: rgba(25, 25, 35, 0.95);
+  --bg-input: rgba(35, 35, 50, 0.9);
+  --text-primary: #e4e4e7;
+  --text-secondary: #a1a1aa;
+  --accent: #6d5acd;
+  --accent-hover: #7c6bd6;
+  --border: rgba(63, 63, 70, 0.5);
+  --success: #22c55e;
+  --error: #ef4444;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  color: var(--text-primary);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* Draggable title bar region */
+[data-tauri-drag-region] {
+  cursor: grab;
+}
+[data-tauri-drag-region]:active {
+  cursor: grabbing;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 100, 120, 0.4);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 100, 120, 0.6);
+}
+
+/* Markdown content */
+.markdown-content h2 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0.6rem 0 0.3rem 0;
+}
+.markdown-content h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.2rem 0;
+}
+.markdown-content p {
+  margin: 0.2rem 0;
+  line-height: 1.5;
+}
+.markdown-content ul, .markdown-content ol {
+  padding-left: 1.2rem;
+  margin: 0.2rem 0;
+}
+.markdown-content li {
+  margin: 0.1rem 0;
+  line-height: 1.5;
+}
+.markdown-content pre {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: 0.5rem;
+  margin: 0.3rem 0;
+  overflow-x: auto;
+  font-size: 0.78rem;
+}
+.markdown-content code {
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 0.78rem;
+}
+.markdown-content p code {
+  background: rgba(100, 100, 140, 0.2);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
