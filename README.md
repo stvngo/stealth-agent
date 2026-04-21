@@ -2,6 +2,137 @@
 
 A native desktop interview assistant that floats over any window you're in, including full-screen Zoom, Meet, Teams, Chrome, and IDEs, while remaining **completely invisible** to anything capturing your screen. Built with Tauri 2 (Rust + WebView).
 
+## Architecture at a Glance
+
+```mermaid
+flowchart TB
+    User(["User"])
+
+    subgraph OS["macOS / Windows"]
+        direction LR
+        Shortcuts["Global shortcuts<br/>⌘B · ⌘` · ⌘⇧↑↓←→"]
+        Mic["Microphone"]
+        Display["Display / Screenshot"]
+    end
+
+    subgraph Frontend["Frontend  (React + TypeScript + Vite)"]
+        direction TB
+        App["App.tsx<br/>shell · tabs"]
+        subgraph Views["Views"]
+            direction LR
+            ChatBox["ChatBox"]
+            Transcript["TranscriptView"]
+            SettingsUI["Settings"]
+        end
+        subgraph Hooks["Hooks"]
+            direction LR
+            useAI["useAI · useAIEventBridge"]
+            useAudio["useAudio"]
+            useShortcuts["useShortcuts"]
+        end
+        Store["Zustand store<br/>messages · transcript · config"]
+        App --> Views
+        Views --> Hooks
+        Hooks --> Store
+    end
+
+    subgraph Tauri["Tauri IPC  (invoke · emit · listen)"]
+        direction LR
+        Commands["commands.rs<br/>send_message · take_screenshot<br/>start_recording · move_window"]
+        Events["Events<br/>ai-token · ai-done · ai-error<br/>trigger-screenshot · transcript-entry"]
+    end
+
+    subgraph Backend["Rust backend  (src-tauri/)"]
+        direction TB
+        Lib["lib.rs<br/>entry · global shortcuts · setup"]
+        subgraph Stealth["stealth/"]
+            direction LR
+            MacOS["macos.rs<br/>NSPanel swap · watchdog loop<br/>sharingType=None"]
+            Win["windows.rs<br/>WDA_EXCLUDEFROMCAPTURE<br/>WS_EX_NOACTIVATE"]
+            Process["process.rs<br/>LSUIElement · accessory policy"]
+        end
+        subgraph Audio["audio/"]
+            direction LR
+            Capture["capture.rs (cpal)"]
+            Transcribe["transcribe.rs<br/>Whisper chunks"]
+        end
+        subgraph AI["ai/"]
+            direction LR
+            Context["context.rs<br/>system prompt · history · screenshot"]
+            Client["client.rs<br/>streaming OpenAI client"]
+        end
+        Screen["screen/ (ScreenCaptureKit)"]
+        Lib --> Stealth
+        Lib --> Commands
+    end
+
+    subgraph External["External APIs"]
+        direction LR
+        Whisper["OpenAI Whisper"]
+        GPT["GPT-4o Vision"]
+    end
+
+    User -- "press shortcut" --> Shortcuts
+    User -- "type / click" --> Frontend
+    Shortcuts --> Lib
+    Mic --> Capture
+    Display --> Screen
+
+    useAI -- "invoke send_message" --> Commands
+    useAudio -- "invoke start/stop" --> Commands
+    useShortcuts -- "listen trigger-screenshot" --> Events
+    useAI -- "listen ai-token / ai-done" --> Events
+
+    Commands --> AI
+    Commands --> Screen
+    Commands --> Audio
+    Capture --> Transcribe
+    Transcribe -- "chunked audio" --> Whisper
+    Transcribe -- "transcript-entry" --> Events
+    Context --> Client
+    Client -- "streaming chat" --> GPT
+    Client -- "ai-token / ai-done" --> Events
+
+    Stealth -. "hides panel from" .-> Display
+
+    classDef userNode fill:#111,stroke:#4c8dff,stroke-width:2px,color:#fff
+    classDef osNode fill:#1a1a1a,stroke:#888,color:#ddd
+    classDef feNode fill:#0d2540,stroke:#4c8dff,color:#cfe1ff
+    classDef ipcNode fill:#2a1f3d,stroke:#a78bfa,color:#ead6ff
+    classDef beNode fill:#0f2a1d,stroke:#4ade80,color:#c7f2d6
+    classDef extNode fill:#3a1f1f,stroke:#f87171,color:#ffd6d6
+    classDef stealthNode fill:#3a2a0a,stroke:#facc15,color:#fff4c2
+
+    class User userNode
+    class Shortcuts,Mic,Display osNode
+    class App,ChatBox,Transcript,SettingsUI,useAI,useAudio,useShortcuts,Store feNode
+    class Commands,Events ipcNode
+    class Lib,Capture,Transcribe,Context,Client,Screen beNode
+    class MacOS,Win,Process stealthNode
+    class Whisper,GPT extNode
+
+    click App href "./src/App.tsx" "src/App.tsx"
+    click ChatBox href "./src/components/ChatBox.tsx" "src/components/ChatBox.tsx"
+    click Transcript href "./src/components/TranscriptView.tsx" "src/components/TranscriptView.tsx"
+    click SettingsUI href "./src/components/Settings.tsx" "src/components/Settings.tsx"
+    click useAI href "./src/hooks/useAI.ts" "src/hooks/useAI.ts"
+    click useAudio href "./src/hooks/useAudio.ts" "src/hooks/useAudio.ts"
+    click useShortcuts href "./src/hooks/useShortcuts.ts" "src/hooks/useShortcuts.ts"
+    click Store href "./src/stores/appStore.ts" "src/stores/appStore.ts"
+    click Commands href "./src-tauri/src/commands.rs" "src-tauri/src/commands.rs"
+    click Lib href "./src-tauri/src/lib.rs" "src-tauri/src/lib.rs"
+    click MacOS href "./src-tauri/src/stealth/macos.rs" "src-tauri/src/stealth/macos.rs"
+    click Win href "./src-tauri/src/stealth/windows.rs" "src-tauri/src/stealth/windows.rs"
+    click Process href "./src-tauri/src/stealth/process.rs" "src-tauri/src/stealth/process.rs"
+    click Capture href "./src-tauri/src/audio/capture.rs" "src-tauri/src/audio/capture.rs"
+    click Transcribe href "./src-tauri/src/audio/transcribe.rs" "src-tauri/src/audio/transcribe.rs"
+    click Context href "./src-tauri/src/ai/context.rs" "src-tauri/src/ai/context.rs"
+    click Client href "./src-tauri/src/ai/client.rs" "src-tauri/src/ai/client.rs"
+    click Screen href "./src-tauri/src/screen" "src-tauri/src/screen/"
+```
+
+Legend: <span title="blue">frontend</span> · <span title="purple">Tauri IPC</span> · <span title="green">Rust backend</span> · <span title="yellow">stealth layer</span> · <span title="red">external APIs</span>. The stealth layer is a cross-cutting concern — it intercepts the path from the panel to the display so Zoom / ScreenCaptureKit / `CGWindowList` never see us.
+
 ## Features
 
 ### Invisibility
