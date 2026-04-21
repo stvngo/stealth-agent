@@ -91,14 +91,18 @@ fn register_global_shortcuts(app: &tauri::App) -> Result<(), Box<dyn std::error:
             } else if shortcut == &shortcut_screenshot {
                 let _ = window.emit_to("main", "trigger-screenshot", ());
             } else {
+                // Pixels per Cmd+Shift+Arrow press. Previously 50px; bumped
+                // to 100px so a few presses noticeably reposition the panel
+                // without needing to hold the key.
+                const STEP: f64 = 100.0;
                 let (dx, dy) = if shortcut == &shortcut_up {
-                    (0.0, -50.0)
+                    (0.0, -STEP)
                 } else if shortcut == &shortcut_down {
-                    (0.0, 50.0)
+                    (0.0, STEP)
                 } else if shortcut == &shortcut_left {
-                    (-50.0, 0.0)
+                    (-STEP, 0.0)
                 } else {
-                    (50.0, 0.0)
+                    (STEP, 0.0)
                 };
 
                 if let Ok(pos) = window.outer_position() {
