@@ -3,6 +3,7 @@ import { ChatBox } from "./components/ChatBox";
 import { TranscriptView } from "./components/TranscriptView";
 import { Settings } from "./components/Settings";
 import { useShortcuts } from "./hooks/useShortcuts";
+import { useAIEventBridge } from "./hooks/useAI";
 import { useAppStore } from "./stores/appStore";
 
 type Tab = "chat" | "transcript" | "settings";
@@ -14,6 +15,9 @@ const TABS: { id: Tab; label: string; Icon: typeof MessageSquare }[] = [
 ];
 
 function App() {
+  // Mount the AI event listeners exactly once for the app's lifetime.
+  // Consumers (ChatBox, useShortcuts) should call useAI() for actions only.
+  useAIEventBridge();
   useShortcuts();
   const { activeTab, setActiveTab, clearMessages } = useAppStore();
 
