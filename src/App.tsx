@@ -1,28 +1,34 @@
+import { MessageSquare, Mic, Settings as SettingsIcon, Trash2, Ghost } from "lucide-react";
 import { ChatBox } from "./components/ChatBox";
 import { TranscriptView } from "./components/TranscriptView";
 import { Settings } from "./components/Settings";
 import { useShortcuts } from "./hooks/useShortcuts";
 import { useAppStore } from "./stores/appStore";
 
+type Tab = "chat" | "transcript" | "settings";
+
+const TABS: { id: Tab; label: string; Icon: typeof MessageSquare }[] = [
+  { id: "chat", label: "Chat", Icon: MessageSquare },
+  { id: "transcript", label: "Transcript", Icon: Mic },
+  { id: "settings", label: "Settings", Icon: SettingsIcon },
+];
+
 function App() {
   useShortcuts();
   const { activeTab, setActiveTab, clearMessages } = useAppStore();
 
   return (
-    <div
-      className="h-screen w-screen flex flex-col rounded-xl overflow-hidden"
-      style={{ background: "var(--bg-primary)", border: "1px solid var(--border)" }}
-    >
+    <div className="app-shell h-screen w-screen flex flex-col rounded-[14px] overflow-hidden">
       {/* Drag region / Title bar */}
       <div
         data-tauri-drag-region
-        className="flex items-center justify-between px-3 py-1.5 shrink-0 select-none"
+        className="flex items-center justify-between px-3 py-2 shrink-0 select-none"
         style={{ borderBottom: "1px solid var(--border)" }}
       >
-        <div className="flex items-center gap-1.5" data-tauri-drag-region>
-          <div className="w-2 h-2 rounded-full" style={{ background: "var(--success)" }} />
+        <div className="flex items-center gap-2" data-tauri-drag-region>
+          <Ghost size={13} style={{ color: "var(--accent-hover)" }} />
           <span
-            className="text-[11px] font-medium"
+            className="text-[11px] font-medium tracking-tight"
             style={{ color: "var(--text-secondary)" }}
             data-tauri-drag-region
           >
@@ -30,27 +36,31 @@ function App() {
           </span>
         </div>
 
-        <div className="flex gap-0.5">
-          {(["chat", "transcript", "settings"] as const).map((tab) => (
+        <div className="flex items-center gap-1">
+          {TABS.map(({ id, label, Icon }) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className="px-2 py-0.5 rounded text-[11px] transition-colors"
-              style={{
-                background: activeTab === tab ? "var(--accent)" : "transparent",
-                color: activeTab === tab ? "white" : "var(--text-secondary)",
-              }}
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className="btn-ghost"
+              data-active={activeTab === id}
+              title={label}
+              aria-label={label}
             >
-              {tab === "chat" ? "💬" : tab === "transcript" ? "🎤" : "⚙️"}
+              <Icon size={13} strokeWidth={2} />
             </button>
           ))}
+          <div
+            className="mx-1 h-4 w-px"
+            style={{ background: "var(--border)" }}
+            aria-hidden
+          />
           <button
             onClick={clearMessages}
-            className="px-2 py-0.5 rounded text-[11px] ml-1 transition-colors hover:opacity-80"
-            style={{ color: "var(--text-secondary)" }}
+            className="btn-ghost"
             title="Clear chat"
+            aria-label="Clear chat"
           >
-            🗑
+            <Trash2 size={13} strokeWidth={2} />
           </button>
         </div>
       </div>

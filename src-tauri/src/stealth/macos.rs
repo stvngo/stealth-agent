@@ -67,22 +67,27 @@ fn apply_sharing_none_to_all_windows(mtm: MainThreadMarker) {
         let ns_window: Retained<NSWindow> =
             unsafe { objc2::msg_send![&*windows, objectAtIndex: i] };
 
-        // After `object_setClass` swap to NSPanel, AppKit and the WindowServer
-        // can end up out of sync re: sharingType -- setSharingType(None) is a
-        // no-op from AppKit's perspective because the client-side ivar already
-        // says "None". Force a real state change every cycle: ReadOnly -> None.
-        // This makes AppKit emit a fresh NSWindowServerCommunicationSkein
-        // update and Zoom / ScreenCaptureKit see the current value.
-        ns_window.setSharingType(NSWindowSharingType::ReadOnly);
-        ns_window.setSharingType(NSWindowSharingType::None);
+        // Only touch sharingType if it's drifted away from None. The
+        // ReadOnly -> None round-trip forces an AppKit<->WindowServer resync
+        // after a class swap, but we don't want to do it on every tick --
+        // the toggle itself causes a composition pass and the WebView
+        // backdrop-filter then has to re-render, which the user perceives as
+        // the panel "pulsing" between transparencies.
+        let current_sharing: u64 = unsafe { objc2::msg_send![&*ns_window, sharingType] };
+        if current_sharing != NSWindowSharingType::None.0 as u64 {
+            ns_window.setSharingType(NSWindowSharingType::ReadOnly);
+            ns_window.setSharingType(NSWindowSharingType::None);
+        }
 
-        // OR-in cross-space flags without touching Tauri/system defaults.
-        // CanJoinAllSpaces     -> appears on every Space
-        // FullScreenAuxiliary  -> allowed to render over full-screen apps
-        let mut behavior = ns_window.collectionBehavior();
-        behavior |= NSWindowCollectionBehavior::CanJoinAllSpaces;
-        behavior |= NSWindowCollectionBehavior::FullScreenAuxiliary;
-        ns_window.setCollectionBehavior(behavior);
+        // OR-in cross-space flags. Only write when the bits actually change
+        // -- a no-op setCollectionBehavior still triggers a relayout.
+        let current_behavior = ns_window.collectionBehavior();
+        let desired_behavior = current_behavior
+            | NSWindowCollectionBehavior::CanJoinAllSpaces
+            | NSWindowCollectionBehavior::FullScreenAuxiliary;
+        if desired_behavior != current_behavior {
+            ns_window.setCollectionBehavior(desired_behavior);
+        }
     }
 }
 
@@ -135,12 +140,29 @@ fn apply_hover_level_to_all_windows(mtm: MainThreadMarker) {
         let ns_window: Retained<NSWindow> =
             unsafe { objc2::msg_send![&*windows, objectAtIndex: i] };
 
-        ns_window.setLevel(desired_level);
-
-        unsafe {
-            let _: () = objc2::msg_send![&*ns_window, setHidesOnDeactivate: false];
-            let _: () = objc2::msg_send![&*ns_window, orderFrontRegardless];
+        // Only call setLevel when it's actually drifted. Calling it every
+        // tick with the same value still triggers a compositor pass that
+        // makes the backdrop-filter re-render (visible as transparency pulse).
+        let current_level: isize = unsafe { objc2::msg_send![&*ns_window, level] };
+        if current_level != desired_level {
+            ns_window.setLevel(desired_level);
         }
+
+        // hidesOnDeactivate: only flip when true -- idempotent writes still
+        // cause AppKit state churn.
+        let hides_on_deactivate: bool =
+            unsafe { objc2::msg_send![&*ns_window, hidesOnDeactivate] };
+        if hides_on_deactivate {
+            unsafe {
+                let _: () = objc2::msg_send![&*ns_window, setHidesOnDeactivate: false];
+            }
+        }
+
+        // Intentionally NOT calling orderFrontRegardless in the steady-state
+        // poll. Once the window has been brought to the front (done in
+        // set_non_activating_panel's one-shot init + the delayed re-applies),
+        // the WindowServer keeps it there. Calling orderFrontRegardless
+        // every tick forces a z-order refresh and a composition flash.
     }
 }
 
@@ -186,7 +208,10 @@ pub fn convert_windows_to_panels() {
         }
 
         // OR-in the nonactivating-panel style mask so clicking our window
-        // never activates our app or steals focus.
+        // never activates our app or steals focus. All setters below are
+        // guarded so we only write when the value actually needs changing
+        // -- unconditional calls cause AppKit to re-composite every tick,
+        // which manifests as backdrop-filter transparency flicker.
         unsafe {
             let current_mask: u64 = objc2::msg_send![&*ns_window, styleMask];
             let new_mask = current_mask | NS_WINDOW_STYLE_MASK_NON_ACTIVATING_PANEL;
@@ -194,11 +219,16 @@ pub fn convert_windows_to_panels() {
                 let _: () = objc2::msg_send![&*ns_window, setStyleMask: new_mask];
             }
 
-            // Mark as a floating panel (stays above regular windows within its level).
-            let _: () = objc2::msg_send![&*ns_window, setFloatingPanel: true];
-            // Becomes key only when it genuinely needs keyboard input,
-            // not on every click.
-            let _: () = objc2::msg_send![&*ns_window, setBecomesKeyOnlyIfNeeded: true];
+            let is_floating: bool = objc2::msg_send![&*ns_window, isFloatingPanel];
+            if !is_floating {
+                let _: () = objc2::msg_send![&*ns_window, setFloatingPanel: true];
+            }
+
+            let becomes_key_only: bool =
+                objc2::msg_send![&*ns_window, becomesKeyOnlyIfNeeded];
+            if !becomes_key_only {
+                let _: () = objc2::msg_send![&*ns_window, setBecomesKeyOnlyIfNeeded: true];
+            }
         }
     }
 

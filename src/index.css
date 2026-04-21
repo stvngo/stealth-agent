@@ -1,16 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: rgba(15, 15, 20, 0.92);
-  --bg-secondary: rgba(25, 25, 35, 0.95);
-  --bg-input: rgba(35, 35, 50, 0.9);
-  --text-primary: #e4e4e7;
-  --text-secondary: #a1a1aa;
-  --accent: #6d5acd;
-  --accent-hover: #7c6bd6;
-  --border: rgba(63, 63, 70, 0.5);
-  --success: #22c55e;
-  --error: #ef4444;
+  /* Deeper transparency + subtle warmth for a professional glass feel */
+  --bg-primary: rgba(14, 14, 18, 0.72);
+  --bg-secondary: rgba(28, 28, 36, 0.55);
+  --bg-input: rgba(42, 42, 54, 0.55);
+  --bg-hover: rgba(255, 255, 255, 0.04);
+  --text-primary: rgba(240, 240, 245, 0.96);
+  --text-secondary: rgba(160, 160, 175, 0.85);
+  --text-tertiary: rgba(130, 130, 145, 0.7);
+  --accent: #7c6bd6;
+  --accent-hover: #8a79e2;
+  --accent-muted: rgba(124, 107, 214, 0.18);
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --success: #34d399;
+  --error: #f87171;
+  --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
 * {
@@ -28,7 +34,18 @@ html, body, #root {
   color: var(--text-primary);
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   user-select: none;
+  letter-spacing: -0.01em;
+}
+
+/* The root shell gets a blurred glass effect */
+.app-shell {
+  background: var(--bg-primary);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
 }
 
 /* Draggable title bar region */
@@ -42,56 +59,89 @@ html, body, #root {
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 100, 120, 0.4);
+  background: rgba(150, 150, 170, 0.25);
   border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 100, 120, 0.6);
+  background: rgba(150, 150, 170, 0.45);
+}
+
+/* Buttons -- ghost variant */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  transition: background-color 120ms ease, color 120ms ease;
+  cursor: pointer;
+}
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.btn-ghost[data-active="true"] {
+  background: var(--accent-muted);
+  color: var(--accent-hover);
+}
+
+/* Segmented recording pill */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.92); }
 }
 
 /* Markdown content */
 .markdown-content h2 {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: var(--accent);
-  margin: 0.6rem 0 0.3rem 0;
+  color: var(--accent-hover);
+  margin: 0.75rem 0 0.35rem 0;
+  letter-spacing: -0.01em;
 }
+.markdown-content h2:first-child { margin-top: 0.1rem; }
 .markdown-content h3 {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  margin: 0.5rem 0 0.2rem 0;
+  margin: 0.5rem 0 0.25rem 0;
 }
 .markdown-content p {
-  margin: 0.2rem 0;
-  line-height: 1.5;
+  margin: 0.25rem 0;
+  line-height: 1.55;
 }
 .markdown-content ul, .markdown-content ol {
   padding-left: 1.2rem;
-  margin: 0.2rem 0;
+  margin: 0.25rem 0;
 }
 .markdown-content li {
-  margin: 0.1rem 0;
-  line-height: 1.5;
+  margin: 0.12rem 0;
+  line-height: 1.55;
 }
 .markdown-content pre {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
-  padding: 0.5rem;
-  margin: 0.3rem 0;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  margin: 0.4rem 0;
   overflow-x: auto;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
+  line-height: 1.55;
 }
 .markdown-content code {
-  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
-  font-size: 0.78rem;
+  font-family: "SF Mono", "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 0.76rem;
 }
 .markdown-content p code {
-  background: rgba(100, 100, 140, 0.2);
-  padding: 0.1rem 0.3rem;
-  border-radius: 3px;
+  background: rgba(124, 107, 214, 0.16);
+  padding: 0.08rem 0.32rem;
+  border-radius: 4px;
+  color: var(--accent-hover);
 }
