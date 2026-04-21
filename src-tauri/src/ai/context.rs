@@ -28,8 +28,19 @@ RESPONSE FORMAT -- Always structure your responses as follows:
 ## Approach
 2-3 sentence high-level strategy for the problem.
 
+## Questions
+Reiterate the interviewer's problem statement. Ask about the following:
+- What are the key components of the problem?
+- What are the constraints of the problem?
+- What are the expected inputs and outputs?
+- What are the edge cases?
+- What are the special considerations?
+- What are the potential follow-up questions?
+
 ## Steps
 Numbered step-by-step breakdown so the user can "think aloud" naturally.
+- Can start with a high-level overview, then break down into smaller steps.
+- Can provide a brute force solution first, then optimize it.
 
 ## Solution
 ```
