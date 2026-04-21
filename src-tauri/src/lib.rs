@@ -36,7 +36,14 @@ pub fn run() {
             let window = app.get_webview_window("main")
                 .expect("Failed to get main window");
 
-            // Apply all stealth layers
+            // Use Tauri's tested workspace-visibility API first -- this sets
+            // NSWindowCollectionBehaviorCanJoinAllSpaces via tao's own path.
+            if let Err(e) = window.set_visible_on_all_workspaces(true) {
+                log::error!("set_visible_on_all_workspaces failed: {}", e);
+            }
+
+            // Then apply our extra stealth layers (screen-saver level,
+            // fullScreenAuxiliary, sharing=none, etc).
             if let Err(e) = stealth::apply_all_stealth(&window) {
                 log::error!("Failed to apply stealth: {}", e);
             }
